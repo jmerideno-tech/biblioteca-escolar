@@ -2588,7 +2588,7 @@ function saveEmailJSConfig(){
   const pk=document.getElementById('ejsPublicKey').value.trim();
   const sid=document.getElementById('ejsServiceId').value.trim();
   const tid=document.getElementById('ejsTemplateId').value.trim();
-  if(!pk||!sid||!tid){showToast('Omple els tres camps d'EmailJS',true);return;}
+  if(!pk||!sid||!tid){showToast("Omple els tres camps d'EmailJS",true);return;}
   save('bib_emailjs',{publicKey:pk,serviceId:sid,templateId:tid});
   window.EMAILJS_RT_PUBLIC=pk;
   window.EMAILJS_RT_SERVICE=sid;
@@ -2596,7 +2596,7 @@ function saveEmailJSConfig(){
   try{emailjs.init({publicKey:pk});}catch(e){}
   document.getElementById('ejsStatus').textContent='✓ Configurat i guardat';
   document.getElementById('ejsStatus').style.color='var(--success)';
-  showToast('✓ Configuració d'EmailJS guardada');
+  showToast("✓ Configuració d'EmailJS guardada");
 }
 
 // ── REPEAT LOGIC
@@ -2723,7 +2723,7 @@ function sendConfirmationEmail(booking){
     showToast('✉️ Correu de confirmació enviat');
   }).catch(err=>{
     console.warn('Error enviant correu:',err);
-    showToast('No s\'ha pogut enviar el correu',true);
+    showToast("No s'ha pogut enviar el correu",true);
   });
 }
 
