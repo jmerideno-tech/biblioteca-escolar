@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva Biblioteca Escolar</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f7;
+    --surface: #ffffff;
+    --card: #f5f8fc;
+    --border: #d8e2ef;
+    --accent: #2563eb;
+    --accent2: #7c3aed;
+    --danger: #dc2626;
+    --success: #16a34a;
+    --text: #1e293b;
+    --muted: #64748b;
+    --slot1: #2563eb;
+    --slot2: #7c3aed;
+    --slot3: #ea580c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif; min-height: 100vh;
+    background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(37,99,235,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 80%, rgba(124,58,237,0.05) 0%, transparent 50%);
+  }
+
+  /* LOGIN */
+  #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; }
+  .login-box { box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+    background:var(--surface); border:1px solid var(--border); border-radius:24px;
+    padding:3rem 2.5rem; width:min(420px,100%); text-align:center;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  .login-icon { font-size:2.8rem; margin-bottom:1rem; }
+  .login-box h1 { font-family:'Playfair Display',serif; font-size:1.9rem; font-weight:900; margin-bottom:0.3rem; }
+  .login-box h1 span { color:var(--accent); }
+  .login-sub { color:var(--muted); font-size:0.82rem; margin-bottom:2rem; letter-spacing:0.04em; }
+  .login-form { text-align:left; }
+  .login-error {
+    background:rgba(247,95,95,0.15); border:1px solid rgba(247,95,95,0.4);
+    color:var(--danger); border-radius:10px; padding:0.7rem 1rem;
+    font-size:0.82rem; margin-bottom:1rem; display:none;
+  }
+
+  /* HEADER */
+  #appHeader {
+    padding:0.9rem 2rem; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:1rem;
+    background:var(--surface); border-bottom:1px solid var(--border); box-shadow:0 1px 8px rgba(0,0,0,0.06); position:sticky; top:0; z-index:50;
+  }
+  .header-logo { font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:900; flex:1; }
+  .header-logo span { color:var(--accent); }
+  .header-nav { display:flex; gap:0.4rem; }
+  .nav-btn {
+    padding:0.42rem 0.85rem; border-radius:8px; border:1px solid var(--border);
+    background:none; color:var(--muted); font-size:0.78rem; font-weight:600;
+    cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; letter-spacing:0.03em;
+  }
+  .nav-btn:hover { color:var(--text); border-color:var(--accent2); }
+  .nav-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .user-pill {
+    display:flex; align-items:center; gap:0.55rem;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:40px; padding:0.32rem 0.85rem 0.32rem 0.45rem; font-size:0.76rem;
+  }
+  .user-avatar {
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.7rem; font-weight:700; flex-shrink:0;
+  }
+  .user-name { font-weight:600; }
+  .badge-admin {
+    background:rgba(37,99,235,0.12); color:var(--accent);
+    border-radius:4px; padding:1px 5px; font-size:0.6rem; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase;
+  }
+  .logout-btn {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    border-radius:8px; padding:0.38rem 0.7rem; font-size:0.74rem;
+    cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s;
+  }
+  .logout-btn:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* LAYOUT */
+  .container {
+    max-width:1150px; margin:0 auto; padding:2rem 1.5rem;
+    display:grid; grid-template-columns:310px 1fr; gap:2rem; align-items:start;
+  }
+  @media(max-width:800px){.container{grid-template-columns:1fr}}
+  .panel {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden; position:sticky; top:5rem;
+  }
+  .panel-header {
+    background:var(--card); padding:1rem 1.4rem;
+    border-bottom:1px solid var(--border);
+    font-family:'Playfair Display',serif; font-size:1rem; font-weight:700;
+  }
+  .panel-body { padding:1.4rem; }
+
+  /* CALENDAR */
+  .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.9rem; }
+  .cal-nav button {
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:1rem;
+    display:flex; align-items:center; justify-content:center; transition:all 0.2s;
+  }
+  .cal-nav button:hover { border-color:var(--accent); color:var(--accent); }
+  .cal-month { font-weight:600; font-size:0.9rem; text-transform:capitalize; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; }
+  .cal-day-label { font-size:0.62rem; color:var(--muted); padding:3px 0; text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+  .cal-day {
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    border-radius:7px; font-size:0.78rem; cursor:pointer; transition:all 0.15s; position:relative;
+  }
+  .cal-day.other-month { color:var(--border); cursor:default; }
+  .cal-day.disabled { color:#c0ccda; cursor:not-allowed; }
+  .cal-day.available:hover { background:rgba(79,142,247,0.15); color:var(--accent2); }
+  .cal-day.has-bookings::after {
+    content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+    width:4px; height:4px; border-radius:50%; background:var(--accent);
+  }
+  .cal-day.selected { background:var(--accent); color:#fff; font-weight:700; }
+  .cal-day.selected::after { background:#fff; }
+  .cal-day.today-mark { border:1px solid var(--accent2); }
+
+  /* SLOTS */
+  .slots-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:1.2rem; }
+  .slot-btn {
+    padding:0.55rem 0.3rem; border-radius:10px; border:1.5px solid var(--border);
+    background:var(--card); color:var(--text); font-size:0.68rem; font-weight:600;
+    cursor:pointer; text-align:center; transition:all 0.2s; line-height:1.3;
+  }
+  .slot-btn:hover:not(.booked):not(.selected-slot):not(.my-booking) { border-color:var(--accent2); color:var(--accent2); }
+  .slot-btn.selected-slot { border-color:var(--accent); background:rgba(37,99,235,0.1); color:var(--accent); }
+  .slot-btn.booked { border-color:#d0d9e5; color:#b0bccb; cursor:not-allowed; text-decoration:line-through; }
+  .slot-btn.my-booking { border-color:var(--success); color:var(--success); background:rgba(79,207,142,0.1); cursor:default; }
+  .slot-dot { width:5px; height:5px; border-radius:50%; margin:0 auto 3px; }
+  .s0 .slot-dot { background:var(--slot1); }
+  .s1 .slot-dot { background:var(--slot2); }
+  .s2 .slot-dot { background:var(--slot3); }
+
+  /* FORM */
+  .form-group { margin-bottom:1rem; }
+  label { display:block; font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:0.35rem; }
+  input, select, textarea {
+    width:100%; background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:0.6rem 0.8rem; border-radius:10px; font-family:'DM Sans',sans-serif;
+    font-size:0.86rem; transition:border-color 0.2s; outline:none;
+  }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent2); }
+  textarea { resize:vertical; min-height:65px; }
+  select option { background:var(--card); }
+  .btn {
+    width:100%; padding:0.75rem; border-radius:12px; border:none;
+    font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:700;
+    cursor:pointer; letter-spacing:0.04em; transition:all 0.2s;
+  }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
+  .btn-primary:disabled { background:#d8e2ef; color:#9aaabb; cursor:not-allowed; transform:none; }
+  .divider { border:none; border-top:1px solid var(--border); margin:1rem 0; }
+
+  /* SCHEDULE */
+  .schedule-panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .schedule-header {
+    background:var(--card); padding:1rem 1.4rem; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  }
+  .schedule-title { font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; }
+  .view-toggle { display:flex; background:var(--bg); border-radius:8px; padding:3px; gap:2px; }
+  .view-toggle button {
+    padding:0.28rem 0.65rem; border-radius:6px; border:none; background:transparent;
+    color:var(--muted); font-size:0.72rem; cursor:pointer; font-weight:600; transition:all 0.2s;
+  }
+  .view-toggle button.active { background:var(--accent); color:#fff; }
+  .week-nav { display:flex; align-items:center; gap:0.6rem; }
+  .week-nav button {
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:0.9rem;
+    display:flex; align-items:center; justify-content:center; transition:all 0.2s;
+  }
+  .week-nav button:hover { border-color:var(--accent); color:var(--accent); }
+  .week-label { font-size:0.78rem; color:var(--muted); white-space:nowrap; }
+  .schedule-body { padding:1.4rem; }
+
+  /* WEEK GRID */
+  .week-grid { display:grid; grid-template-columns:78px repeat(5,1fr); gap:5px; }
+  .week-day-header { text-align:center; padding:0.4rem; font-size:0.68rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
+  .week-day-header.today-col { color:var(--accent2); }
+  .time-label { font-size:0.65rem; color:var(--muted); text-align:right; padding-right:7px; display:flex; align-items:center; justify-content:flex-end; font-weight:600; }
+  .week-cell { background:var(--card); border:1px solid var(--border); border-radius:9px; min-height:68px; padding:5px; transition:border-color 0.2s; }
+  .week-cell.disabled-cell { background:#e8eef5; border-color:#dde6f0; }
+  .booking-card {
+    background:rgba(79,142,247,0.12); border-left:3px solid var(--slot1);
+    border-radius:6px; padding:4px 6px; margin-bottom:3px;
+    font-size:0.66rem; cursor:pointer; transition:all 0.2s;
+  }
+  .booking-card:hover { filter:brightness(1.3); }
+  .booking-card.s1 { background:rgba(162,126,247,0.12); border-color:var(--slot2); }
+  .booking-card.s2 { background:rgba(247,135,79,0.12); border-color:var(--slot3); }
+  .booking-card .bc-name { font-weight:700; }
+  .booking-card .bc-who { color:var(--muted); font-size:0.6rem; }
+  .booking-card.mine { outline:1px solid rgba(79,207,142,0.5); }
+
+  /* LIST */
+  .booking-list-item {
+    display:flex; align-items:center; gap:0.9rem; padding:0.9rem;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    margin-bottom:7px; cursor:pointer; transition:all 0.2s;
+  }
+  .booking-list-item:hover { border-color:var(--accent); }
+  .bli-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .bli-info { flex:1; }
+  .bli-name { font-weight:600; font-size:0.86rem; }
+  .bli-meta { font-size:0.72rem; color:var(--muted); margin-top:2px; }
+  .bli-date { text-align:right; font-size:0.72rem; color:var(--muted); flex-shrink:0; }
+  .bli-del {
+    background:none; border:1px solid #d8e2ef; color:var(--danger);
+    width:26px; height:26px; border-radius:7px; cursor:pointer;
+    font-size:0.85rem; display:flex; align-items:center; justify-content:center;
+    transition:all 0.2s; flex-shrink:0;
+  }
+  .bli-del:hover { background:rgba(247,95,95,0.12); border-color:var(--danger); }
+  .empty-state { text-align:center; padding:2.5rem; color:var(--muted); }
+  .empty-state .es-icon { font-size:2.2rem; margin-bottom:0.7rem; opacity:0.35; }
+
+  /* STATS */
+  .stats-bar { display:flex; gap:0.8rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:0.55rem 0.9rem; font-size:0.75rem; color:var(--muted); }
+  .stat strong { display:block; font-size:1.2rem; color:var(--text); font-family:'Playfair Display',serif; }
+  .search-bar { display:flex; gap:0.5rem; margin-bottom:0.8rem; }
+  .search-bar input { flex:1; }
+  .filter-chip {
+    padding:0.28rem 0.65rem; border-radius:20px; border:1px solid var(--border);
+    background:var(--card); color:var(--muted); font-size:0.68rem; cursor:pointer;
+    font-weight:600; white-space:nowrap; transition:all 0.2s;
+  }
+  .filter-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(37,99,235,0.08); }
+
+  /* INFO BAR */
+  .my-info-bar {
+    background:rgba(79,207,142,0.08); border:1px solid rgba(79,207,142,0.2);
+    border-radius:10px; padding:0.6rem 1rem; font-size:0.78rem; color:var(--success);
+    margin-bottom:1rem; display:none;
+  }
+
+  /* ADMIN */
+  #adminSection { max-width:920px; margin:0 auto; padding:2rem 1.5rem; }
+  .admin-title { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:900; margin-bottom:0.3rem; }
+  .admin-title span { color:var(--accent); }
+  .user-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-top:1.5rem; }
+  .user-table-head {
+    background:var(--card); padding:1rem 1.4rem; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  }
+  .user-table-head h3 { font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; padding:0.7rem 1.2rem; font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+  td { padding:0.8rem 1.2rem; font-size:0.83rem; border-bottom:1px solid #edf1f7; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(37,99,235,0.03); }
+  .role-badge { display:inline-block; padding:2px 8px; border-radius:5px; font-size:0.65rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+  .role-admin { background:rgba(37,99,235,0.12); color:var(--accent); }
+  .role-user  { background:rgba(79,142,247,0.15); color:var(--accent2); }
+  .action-btns { display:flex; gap:0.4rem; }
+  .icon-btn {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:0.85rem;
+    display:flex; align-items:center; justify-content:center; transition:all 0.2s;
+  }
+  .icon-btn.edit:hover { border-color:var(--accent2); color:var(--accent2); }
+  .icon-btn.del:hover  { border-color:var(--danger); color:var(--danger); }
+  .btn-sm {
+    padding:0.5rem 1rem; border-radius:10px; border:none; font-family:'DM Sans',sans-serif;
+    font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:0.04em;
+  }
+  .btn-sm.primary { background:var(--accent); color:#fff; }
+  .btn-sm.primary:hover { background:#1d4ed8; }
+
+  /* MODAL */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(5px);
+    z-index:200; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.2s;
+  }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:2rem;
+    width:min(440px,92vw); transform:scale(0.95); transition:transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform:scale(1); }
+  .modal h2 { font-family:'Playfair Display',serif; font-size:1.25rem; margin-bottom:1.2rem; }
+  .modal-actions { display:flex; gap:0.7rem; margin-top:1.4rem; }
+  .btn-ghost { flex:1; padding:0.65rem; border-radius:10px; border:1px solid var(--border); background:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .btn-ghost:hover { border-color:var(--accent2); color:var(--accent2); }
+  .btn-danger { flex:1; padding:0.65rem; border-radius:10px; border:none; background:var(--danger); color:#fff; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .btn-danger:hover { background:#ff7070; }
+
+  /* PASS STRENGTH */
+  .pass-strength { height:3px; border-radius:2px; margin-top:4px; background:var(--border); overflow:hidden; }
+  .pass-strength-bar { height:100%; border-radius:2px; transition:all 0.3s; width:0; }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:2rem; right:2rem; background:var(--success); color:#fff;
+    padding:0.75rem 1.1rem; border-radius:12px; font-weight:700; font-size:0.82rem;
+    opacity:0; transform:translateY(16px); transition:all 0.3s; z-index:999; pointer-events:none;
+  }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.error { background:var(--danger); color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-icon">📚</div>
+    <h1>Biblioteca <span>Escolar</span></h1>
+    <div class="login-sub">Gestió de reserves · Curs 2025–2026</div>
+    <div class="login-form">
+      <div id="loginError" class="login-error"></div>
+      <div class="form-group">
+        <label>Nom d'usuari</label>
+        <input type="text" id="loginUser" placeholder="usuari" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Contrasenya</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" style="margin-top:0.5rem" onclick="doLogin()">Entrar</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell" style="display:none">
+  <div id="appHeader">
+    <div class="header-logo">Biblioteca <span>Escolar</span></div>
+    <div class="header-nav">
+      <button class="nav-btn active" id="navReserves" onclick="showSection('reserves')">Reserves</button>
+      <button class="nav-btn" id="navAdmin" onclick="showSection('admin')" style="display:none">Usuaris</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.8rem;margin-left:auto">
+      <div class="user-pill" id="userPill"></div>
+      <button class="logout-btn" onclick="doLogout()">Sortir</button>
+    </div>
+  </div>
+
+  <!-- RESERVES -->
+  <div id="reservesSection">
+    <div class="container">
+      <div>
+        <div class="panel">
+          <div class="panel-header">📅 Nova Reserva</div>
+          <div class="panel-body">
+            <div class="cal-nav">
+              <button id="prevMonth">‹</button>
+              <div class="cal-month" id="calMonthLabel"></div>
+              <button id="nextMonth">›</button>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <hr class="divider">
+            <div id="selectedDateLabel" style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;text-align:center">Selecciona un dia al calendari</div>
+            <label>Franja horària</label>
+            <div class="slots-grid" id="slotsGrid">
+              <div class="slot-btn s0" data-slot="0" onclick="selectSlot(0)"><div class="slot-dot"></div>9:00–10:30</div>
+              <div class="slot-btn s1" data-slot="1" onclick="selectSlot(1)"><div class="slot-dot"></div>11:00–12:30</div>
+              <div class="slot-btn s2" data-slot="2" onclick="selectSlot(2)"><div class="slot-dot"></div>15:00–16:30</div>
+            </div>
+            <div class="form-group">
+              <label>Grup / Classe *</label>
+              <input type="text" id="classroom" placeholder="Ex: 3r A, 5è B..." />
+            </div>
+            <div class="form-group">
+              <label>Activitat</label>
+              <input type="text" id="activity" placeholder="Lectura, recerca, examen..." />
+            </div>
+            <div class="form-group">
+              <label>Observacions (opcional)</label>
+              <textarea id="notes" placeholder="Necessitats especials, recursos..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="bookBtn" onclick="createBooking()" disabled>Confirmar Reserva</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="stats-bar" id="statsBar"></div>
+        <div class="my-info-bar" id="myInfoBar">Les teves reserves apareixen en verd ★. Pots eliminar-les fent clic a sobre.</div>
+        <div class="schedule-panel">
+          <div class="schedule-header">
+            <div class="schedule-title">Horari de reserves</div>
+            <div style="display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap">
+              <div class="week-nav" id="weekNav" style="display:none">
+                <button onclick="prevWeek()">‹</button>
+                <span class="week-label" id="weekLabel"></span>
+                <button onclick="nextWeek()">›</button>
+              </div>
+              <div class="view-toggle">
+                <button class="active" id="btnWeek" onclick="setView('week')">Setmana</button>
+                <button id="btnList" onclick="setView('list')">Llista</button>
+              </div>
+            </div>
+          </div>
+          <div class="schedule-body" id="scheduleBody"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminSection" style="display:none">
+    <div class="admin-title">Gestió d'<span>Usuaris</span></div>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.3rem">Administra els comptes que poden fer reserves a la biblioteca.</p>
+    <div class="user-table-wrap">
+      <div class="user-table-head">
+        <h3>Usuaris del sistema</h3>
+        <button class="btn-sm primary" onclick="openUserModal()">＋ Nou usuari</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Usuari</th>
+            <th>Nom complet</th>
+            <th>Rol</th>
+            <th>Reserves</th>
+            <th>Última connexió</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="modal-overlay" id="bookingModal">
+  <div class="modal">
+    <h2 id="bModalTitle"></h2>
+    <div style="color:var(--muted);font-size:0.8rem;margin-bottom:1.2rem" id="bModalMeta"></div>
+    <div id="bModalContent"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('bookingModal')">Tancar</button>
+      <button class="btn-danger" id="bModalDelBtn" onclick="deleteActiveBooking()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <h2 id="uModalTitle">Nou usuari</h2>
+    <div class="form-group">
+      <label>Nom d'usuari *</label>
+      <input type="text" id="uUsername" placeholder="sense espais" />
+    </div>
+    <div class="form-group">
+      <label>Nom complet *</label>
+      <input type="text" id="uFullname" placeholder="Anna Garcia..." />
+    </div>
+    <div class="form-group">
+      <label>Contrasenya *</label>
+      <input type="password" id="uPassword" placeholder="mínim 6 caràcters" oninput="checkPassStrength(this.value)" />
+      <div class="pass-strength"><div class="pass-strength-bar" id="passBar"></div></div>
+    </div>
+    <div class="form-group">
+      <label>Rol</label>
+      <select id="uRole">
+        <option value="user">Professor/a (usuari)</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <div id="uModalError" style="color:var(--danger);font-size:0.78rem;margin-top:0.5rem;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('userModal')">Cancel·lar</button>
+      <button class="btn-sm primary" style="flex:1;padding:0.65rem" onclick="saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h2 id="cModalTitle"></h2>
+    <p style="color:var(--muted);font-size:0.83rem;margin-bottom:0.3rem" id="cModalText"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('confirmModal')">Cancel·lar</button>
+      <button class="btn-danger" id="cModalConfirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG
+const SCHOOL_START = new Date(2025,8,12);
+const SCHOOL_END   = new Date(2026,5,20);
+const SLOTS = ['9:00–10:30','11:00–12:30','15:00–16:30'];
+const SLOT_COLORS = ['var(--slot1)','var(--slot2)','var(--slot3)'];
+const MONTHS_CA = ['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
+const DAYS_LONG = ['Dilluns','Dimarts','Dimecres','Dijous','Divendres'];
+
+// ── STORAGE
+function load(k,d){ try{return JSON.parse(localStorage.getItem(k))??d}catch{return d} }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+
+// ── DEFAULT ADMIN
+let users = load('bib_users', null);
+if (!users) {
+  users = [{id:'u0',username:'admin',fullname:'Administrador',password:'admin123',role:'admin',createdAt:new Date().toISOString(),lastLogin:null}];
+  save('bib_users', users);
+}
+
+let bookings = load('bib_bookings', []);
+let currentUser = null, activeBookingId = null, editingUserId = null;
+
+// ── STATE
+let selectedDate=null, selectedSlot=null;
+let currentMonth=new Date(2025,8,1), currentWeekStart=getMonday(new Date());
+let currentView='week', searchFilter='', slotFilter=-1;
+
+// ── AUTH
+function doLogin(){
+  const username=document.getElementById('loginUser').value.trim();
+  const password=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginError');
+  const user=users.find(u=>u.username===username&&u.password===password);
+  if(!user){err.textContent="Usuari o contrasenya incorrectes.";err.style.display='block';return;}
+  err.style.display='none';
+  currentUser=user;
+  user.lastLogin=new Date().toISOString();
+  save('bib_users',users);
+  startApp();
+}
+
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus()});
+
+function doLogout(){
+  currentUser=null; selectedDate=null; selectedSlot=null;
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+}
+
+function startApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  // Pill
+  const colors=['#4f8ef7','#a27ef7','#f7874f','#4fcf8e','#f75f5f','#f7c74f'];
+  const ci=currentUser.id.charCodeAt(currentUser.id.length-1)%colors.length;
+  const initials=currentUser.fullname.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('userPill').innerHTML=`
+    <div class="user-avatar" style="background:${colors[ci]}22;color:${colors[ci]}">${initials}</div>
+    <div><div class="user-name">${currentUser.fullname}</div></div>
+    ${currentUser.role==='admin'?'<span class="badge-admin">Admin</span>':''}`;
+  document.getElementById('navAdmin').style.display=currentUser.role==='admin'?'':'none';
+  document.getElementById('myInfoBar').style.display=currentUser.role!=='admin'?'block':'none';
+
+  const today=new Date();
+  currentMonth=today<SCHOOL_START?new Date(2025,8,1):today>SCHOOL_END?new Date(2026,5,1):new Date(today.getFullYear(),today.getMonth(),1);
+  currentWeekStart=getMonday(today<SCHOOL_START?SCHOOL_START:today>SCHOOL_END?SCHOOL_END:today);
+  showSection('reserves');
+  renderCalendar(); renderStats(); setView('week');
+}
+
+// ── NAVIGATION
+function showSection(sec){
+  document.getElementById('reservesSection').style.display=sec==='reserves'?'':'none';
+  document.getElementById('adminSection').style.display=sec==='admin'?'':'none';
+  document.getElementById('navReserves').className='nav-btn'+(sec==='reserves'?' active':'');
+  document.getElementById('navAdmin').className='nav-btn'+(sec==='admin'?' active':'');
+  if(sec==='admin') renderUsersTable();
+}
+
+// ── HELPERS
+function dateKey(d){return d.toISOString().slice(0,10)}
+function isSchoolDay(d){const day=d.getDay();return day!==0&&day!==6&&d>=SCHOOL_START&&d<=SCHOOL_END}
+function getMonday(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=dt.getDay();dt.setDate(dt.getDate()+(day===0?-6:1-day));return dt}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function formatDateLong(d){const wd=['Diumenge','Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte'];return`${wd[d.getDay()]}, ${d.getDate()} de ${MONTHS_CA[d.getMonth()]} de ${d.getFullYear()}`}
+function isBooked(dateStr,si){return bookings.some(b=>b.date===dateStr&&b.slot===si)}
+function isMyBooking(dateStr,si){return bookings.some(b=>b.date===dateStr&&b.slot===si&&b.userId===currentUser.id)}
+function canDelete(b){return currentUser.role==='admin'||b.userId===currentUser.id}
+function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'')+' show';setTimeout(()=>{t.className='toast'+(isError?' error':'')},3000)}
+function closeModal(id){document.getElementById(id).className='modal-overlay';if(id==='bookingModal')activeBookingId=null;if(id==='userModal')editingUserId=null}
+
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.className='modal-overlay'}));
+
+// ── CALENDAR
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent=`${MONTHS_CA[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`;
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'].forEach(d=>{const el=document.createElement('div');el.className='cal-day-label';el.textContent=d;grid.appendChild(el)});
+  const first=new Date(currentMonth.getFullYear(),currentMonth.getMonth(),1);
+  let sd=first.getDay();sd=sd===0?6:sd-1;
+  const dim=new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,0).getDate();
+  const todayKey=dateKey(new Date());
+  for(let i=0;i<sd;i++){const el=document.createElement('div');el.className='cal-day other-month';grid.appendChild(el)}
+  for(let d=1;d<=dim;d++){
+    const date=new Date(currentMonth.getFullYear(),currentMonth.getMonth(),d);
+    const el=document.createElement('div');
+    const key=dateKey(date);
+    const hasBk=bookings.some(b=>b.date===key);
+    const isT=key===todayKey;
+    if(!isSchoolDay(date)){el.className='cal-day disabled';}
+    else{
+      el.className='cal-day available'+(hasBk?' has-bookings':'')+(isT?' today-mark':'');
+      if(selectedDate&&key===dateKey(selectedDate))el.classList.add('selected');
+      el.addEventListener('click',()=>selectDate(date));
+    }
+    el.textContent=d;grid.appendChild(el);
+  }
+}
+document.getElementById('prevMonth').onclick=()=>{currentMonth.setMonth(currentMonth.getMonth()-1);renderCalendar()};
+document.getElementById('nextMonth').onclick=()=>{currentMonth.setMonth(currentMonth.getMonth()+1);renderCalendar()};
+function selectDate(date){selectedDate=date;selectedSlot=null;renderCalendar();updateSlotsUI();document.getElementById('selectedDateLabel').textContent=formatDateLong(date);validateForm()}
+
+// ── SLOTS
+function updateSlotsUI(){
+  if(!selectedDate)return;
+  const key=dateKey(selectedDate);
+  document.querySelectorAll('.slot-btn').forEach((btn,i)=>{
+    btn.className=`slot-btn s${i}`;
+    if(isMyBooking(key,i))btn.classList.add('my-booking');
+    else if(isBooked(key,i))btn.classList.add('booked');
+    else if(i===selectedSlot)btn.classList.add('selected-slot');
+  });
+}
+function selectSlot(i){
+  if(!selectedDate){showToast('Selecciona primer un dia',true);return}
+  if(isBooked(dateKey(selectedDate),i))return;
+  selectedSlot=i;updateSlotsUI();validateForm();
+}
+function validateForm(){document.getElementById('bookBtn').disabled=!(selectedDate&&selectedSlot!==null&&document.getElementById('classroom').value.trim())}
+document.getElementById('classroom').addEventListener('input',validateForm);
+
+// ── CREATE BOOKING
+function createBooking(){
+  const classroom=document.getElementById('classroom').value.trim();
+  const activity=document.getElementById('activity').value.trim();
+  const notes=document.getElementById('notes').value.trim();
+  if(!classroom||!selectedDate||selectedSlot===null){showToast('Completa els camps obligatoris',true);return}
+  const key=dateKey(selectedDate);
+  if(isBooked(key,selectedSlot)){showToast('Aquesta franja ja està reservada',true);return}
+  bookings.push({id:Date.now().toString(),date:key,slot:selectedSlot,userId:currentUser.id,userName:currentUser.fullname,classroom,activity:activity||'Ús general',notes,created:new Date().toISOString()});
+  save('bib_bookings',bookings);
+  showToast(`✓ Reserva confirmada — ${classroom}`);
+  document.getElementById('classroom').value='';
+  document.getElementById('activity').value='';
+  document.getElementById('notes').value='';
+  selectedSlot=null;
+  updateSlotsUI();validateForm();renderCalendar();renderSchedule();renderStats();
+}
+
+// ── STATS
+function renderStats(){
+  const today=dateKey(new Date());
+  const mine=bookings.filter(b=>b.userId===currentUser.id);
+  const upcoming=bookings.filter(b=>b.date>=today).length;
+  const bar=document.getElementById('statsBar');
+  if(currentUser.role==='admin'){
+    bar.innerHTML=`<div class="stat"><strong>${bookings.length}</strong>Total reserves</div><div class="stat"><strong>${upcoming}</strong>Pròximes</div><div class="stat"><strong>${users.filter(u=>u.role!=='admin').length}</strong>Professors</div>`;
+  } else {
+    const myUpcoming=mine.filter(b=>b.date>=today).length;
+    bar.innerHTML=`<div class="stat"><strong>${mine.length}</strong>Les meves</div><div class="stat"><strong>${myUpcoming}</strong>Pròximes</div><div class="stat"><strong>${bookings.length}</strong>Total escola</div>`;
+  }
+}
+
+// ── SCHEDULE
+function setView(v){
+  currentView=v;
+  document.getElementById('btnWeek').className=v==='week'?'active':'';
+  document.getElementById('btnList').className=v==='list'?'active':'';
+  document.getElementById('weekNav').style.display=v==='week'?'flex':'none';
+  renderSchedule();
+}
+function renderSchedule(){currentView==='week'?renderWeek():renderList()}
+function prevWeek(){currentWeekStart=addDays(currentWeekStart,-7);updateWeekLabel();renderWeek()}
+function nextWeek(){currentWeekStart=addDays(currentWeekStart,7);updateWeekLabel();renderWeek()}
+function updateWeekLabel(){const end=addDays(currentWeekStart,4);document.getElementById('weekLabel').textContent=`${currentWeekStart.getDate()}–${end.getDate()} ${MONTHS_CA[end.getMonth()]}`}
+
+function renderWeek(){
+  updateWeekLabel();
+  const body=document.getElementById('scheduleBody');
+  const todayKey=dateKey(new Date());
+  let html='<div class="week-grid"><div></div>';
+  for(let d=0;d<5;d++){
+    const date=addDays(currentWeekStart,d);
+    const active=isSchoolDay(date);
+    const isT=dateKey(date)===todayKey;
+    html+=`<div class="week-day-header${isT?' today-col':''}" style="${!active?'opacity:0.25':''}">${DAYS_LONG[d].slice(0,2)}<br><span style="font-size:0.82rem;font-weight:400">${date.getDate()}</span></div>`;
+  }
+  SLOTS.forEach((slot,si)=>{
+    html+=`<div class="time-label" style="color:${SLOT_COLORS[si]}">${slot.replace('–','–<br>')}</div>`;
+    for(let d=0;d<5;d++){
+      const date=addDays(currentWeekStart,d);
+      const key=dateKey(date);
+      const active=isSchoolDay(date);
+      if(!active){html+='<div class="week-cell disabled-cell"></div>';continue}
+      const dayBks=bookings.filter(b=>b.date===key&&b.slot===si);
+      html+=`<div class="week-cell${dayBks.length?' has-booking':''}">`;
+      dayBks.forEach(b=>{
+        const mine=b.userId===currentUser.id;
+        html+=`<div class="booking-card s${si}${mine?' mine':''}" onclick="openBookingModal('${b.id}')"><div class="bc-name">${b.classroom}</div><div class="bc-who">${mine?'★ Tu':b.userName}</div></div>`;
+      });
+      html+='</div>';
+    }
+  });
+  html+='</div>';
+  body.innerHTML=html;
+}
+
+function renderList(){
+  const body=document.getElementById('scheduleBody');
+  let all=currentUser.role==='admin'?[...bookings]:bookings.filter(b=>b.userId===currentUser.id);
+  all.sort((a,b)=>a.date.localeCompare(b.date)||a.slot-b.slot);
+  if(searchFilter){const q=searchFilter.toLowerCase();all=all.filter(b=>b.classroom.toLowerCase().includes(q)||b.userName.toLowerCase().includes(q)||b.activity.toLowerCase().includes(q))}
+  if(slotFilter>=0)all=all.filter(b=>b.slot===slotFilter);
+  let html=`<div class="search-bar"><input type="text" placeholder="Cerca…" value="${searchFilter}" oninput="searchFilter=this.value;renderList()" /></div>
+    <div style="display:flex;gap:5px;margin-bottom:0.9rem;flex-wrap:wrap">
+      <div class="filter-chip${slotFilter===-1?' active':''}" onclick="slotFilter=-1;renderList()">Totes</div>
+      ${SLOTS.map((s,i)=>`<div class="filter-chip${slotFilter===i?' active':''}" onclick="slotFilter=${i};renderList()">${s}</div>`).join('')}
+    </div>`;
+  if(!all.length){html+=`<div class="empty-state"><div class="es-icon">📚</div>No hi ha reserves${bookings.length?' amb aquests filtres':''}</div>`}
+  else all.forEach(b=>{
+    const color=SLOT_COLORS[b.slot];
+    const [y,m,d]=b.date.split('-');
+    const dObj=new Date(+y,+m-1,+d);
+    const dStr=`${dObj.getDate()} ${MONTHS_CA[dObj.getMonth()].slice(0,3)}`;
+    const mine=b.userId===currentUser.id;
+    const delOk=canDelete(b);
+    html+=`<div class="booking-list-item" onclick="openBookingModal('${b.id}')">
+      <div class="bli-dot" style="background:${color}"></div>
+      <div class="bli-info">
+        <div class="bli-name">${b.classroom}${mine?' <span style="color:var(--success);font-size:0.7rem">★</span>':''}</div>
+        <div class="bli-meta">${SLOTS[b.slot]} · ${b.activity}${currentUser.role==='admin'?' · '+b.userName:''}</div>
+      </div>
+      <div class="bli-date">${dStr}</div>
+      ${delOk?`<button class="bli-del" onclick="event.stopPropagation();quickDelete('${b.id}')">✕</button>`:''}
+    </div>`;
+  });
+  body.innerHTML=html;
+}
+
+// ── BOOKING MODAL
+function openBookingModal(id){
+  const b=bookings.find(x=>x.id===id);
+  if(!b)return;
+  activeBookingId=id;
+  const [y,m,d]=b.date.split('-');
+  const dObj=new Date(+y,+m-1,+d);
+  const mine=b.userId===currentUser.id;
+  document.getElementById('bModalTitle').textContent=`${b.classroom} · ${SLOTS[b.slot]}`;
+  document.getElementById('bModalMeta').textContent=formatDateLong(dObj);
+  document.getElementById('bModalContent').innerHTML=`<div style="display:grid;gap:0.7rem">
+    <div><div style="color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px">Reservat per</div><div style="font-weight:600">${b.userName}${mine?' <span style="color:var(--success);font-size:0.72rem">· tu</span>':''}</div></div>
+    <div><div style="color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px">Activitat</div><div>${b.activity}</div></div>
+    ${b.notes?`<div><div style="color:var(--muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px">Observacions</div><div style="color:var(--muted);font-size:0.85rem">${b.notes}</div></div>`:''}
+  </div>`;
+  document.getElementById('bModalDelBtn').style.display=canDelete(b)?'':'none';
+  document.getElementById('bookingModal').className='modal-overlay open';
+}
+function deleteActiveBooking(){
+  if(!activeBookingId)return;
+  bookings=bookings.filter(b=>b.id!==activeBookingId);
+  save('bib_bookings',bookings);
+  closeModal('bookingModal');
+  showToast('Reserva eliminada');
+  renderCalendar();renderSchedule();renderStats();
+}
+function quickDelete(id){
+  const b=bookings.find(x=>x.id===id);
+  if(!b||!canDelete(b))return;
+  openConfirm('Eliminar reserva?',`${b.classroom} · ${SLOTS[b.slot]} · ${b.date}`,()=>{
+    bookings=bookings.filter(x=>x.id!==id);
+    save('bib_bookings',bookings);
+    showToast('Reserva eliminada');
+    renderCalendar();renderSchedule();renderStats();
+  });
+}
+
+// ── CONFIRM MODAL
+function openConfirm(title,text,cb){
+  document.getElementById('cModalTitle').textContent=title;
+  document.getElementById('cModalText').textContent=text;
+  document.getElementById('cModalConfirm').onclick=()=>{cb();closeModal('confirmModal')};
+  document.getElementById('confirmModal').className='modal-overlay open';
+}
+
+// ── ADMIN USERS
+function renderUsersTable(){
+  document.getElementById('usersBody').innerHTML=users.map(u=>{
+    const bCount=bookings.filter(b=>b.userId===u.id).length;
+    const lastLogin=u.lastLogin?new Date(u.lastLogin).toLocaleDateString('ca',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const isSelf=u.id===currentUser.id;
+    return`<tr>
+      <td style="font-family:monospace;font-size:0.82rem">${u.username}</td>
+      <td>${u.fullname}</td>
+      <td><span class="role-badge role-${u.role}">${u.role==='admin'?'Admin':'Usuari'}</span></td>
+      <td style="color:var(--muted)">${bCount}</td>
+      <td style="color:var(--muted)">${lastLogin}</td>
+      <td><div class="action-btns">
+        <button class="icon-btn edit" title="Editar" onclick="openUserModal('${u.id}')">✏️</button>
+        ${!isSelf?`<button class="icon-btn del" title="Eliminar" onclick="deleteUser('${u.id}')">🗑️</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function openUserModal(userId=null){
+  editingUserId=userId;
+  document.getElementById('uModalTitle').textContent=userId?'Editar usuari':'Nou usuari';
+  document.getElementById('uModalError').style.display='none';
+  document.getElementById('passBar').style.width='0';
+  if(userId){
+    const u=users.find(x=>x.id===userId);
+    document.getElementById('uUsername').value=u.username;
+    document.getElementById('uUsername').disabled=true;
+    document.getElementById('uFullname').value=u.fullname;
+    document.getElementById('uPassword').value='';
+    document.getElementById('uPassword').placeholder='Deixar buit per no canviar';
+    document.getElementById('uRole').value=u.role;
+  } else {
+    document.getElementById('uUsername').value='';
+    document.getElementById('uUsername').disabled=false;
+    document.getElementById('uFullname').value='';
+    document.getElementById('uPassword').value='';
+    document.getElementById('uPassword').placeholder='mínim 6 caràcters';
+    document.getElementById('uRole').value='user';
+  }
+  document.getElementById('userModal').className='modal-overlay open';
+}
+
+function checkPassStrength(val){
+  const bar=document.getElementById('passBar');
+  let score=0;
+  if(val.length>=6)score++;
+  if(val.length>=10)score++;
+  if(/[A-Z]/.test(val))score++;
+  if(/[0-9]/.test(val))score++;
+  if(/[^a-zA-Z0-9]/.test(val))score++;
+  const pct=(score/5)*100;
+  const cols=['#f75f5f','#f7874f','#e8c547','#4fcf8e','#4fcf8e'];
+  bar.style.width=pct+'%';
+  bar.style.background=cols[Math.max(score-1,0)]||'var(--border)';
+}
+
+function saveUser(){
+  const username=document.getElementById('uUsername').value.trim().toLowerCase().replace(/\s/g,'');
+  const fullname=document.getElementById('uFullname').value.trim();
+  const password=document.getElementById('uPassword').value;
+  const role=document.getElementById('uRole').value;
+  const errEl=document.getElementById('uModalError');
+  if(!fullname){errEl.textContent='El nom complet és obligatori.';errEl.style.display='block';return}
+  if(!editingUserId){
+    if(!username){errEl.textContent="El nom d'usuari és obligatori.";errEl.style.display='block';return}
+    if(users.find(u=>u.username===username)){errEl.textContent="Aquest nom d'usuari ja existeix.";errEl.style.display='block';return}
+    if(!password||password.length<6){errEl.textContent='La contrasenya ha de tenir mínim 6 caràcters.';errEl.style.display='block';return}
+    users.push({id:'u'+Date.now(),username,fullname,password,role,createdAt:new Date().toISOString(),lastLogin:null});
+    showToast(`✓ Usuari "${username}" creat`);
+  } else {
+    const u=users.find(x=>x.id===editingUserId);
+    u.fullname=fullname;u.role=role;
+    if(password){
+      if(password.length<6){errEl.textContent='La contrasenya ha de tenir mínim 6 caràcters.';errEl.style.display='block';return}
+      u.password=password;
+    }
+    showToast('✓ Usuari actualitzat');
+  }
+  save('bib_users',users);
+  closeModal('userModal');
+  renderUsersTable();
+}
+
+function deleteUser(userId){
+  const u=users.find(x=>x.id===userId);
+  if(!u)return;
+  const bCount=bookings.filter(b=>b.userId===userId).length;
+  openConfirm(`Eliminar "${u.username}"?`,`Això eliminarà l'usuari${bCount?` i les seves ${bCount} reserva(es)`:' (sense reserves)'}. No es pot desfer.`,()=>{
+    users=users.filter(x=>x.id!==userId);
+    bookings=bookings.filter(b=>b.userId!==userId);
+    save('bib_users',users);save('bib_bookings',bookings);
+    showToast('Usuari eliminat');
+    renderUsersTable();renderCalendar();renderStats();
+    if(currentView==='list')renderList();
+  });
+}
+</script>
+</body>
+</html>
