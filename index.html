@@ -2150,7 +2150,7 @@ aHuXQliImDnuWXe5Y8PEERj8SGwONsKP+E4E4sbrwH4JW0GD8JaCMLILUsDK4wXqU2uzzMhFBi9A
 BicuWVYXpJUscS3A6niCLFPEHEZ7JVi4tDeTmO92LhbTReSPGhmJn0eyFMFydMPEC42IUq83Uajs
 fEc5AVDwKFqcQAiIpyrtIhbuwZQ4DGWopFgliZN8RsIR6ERyZ1yXiL55v/Sq3+gzrEc8KUd5lXb0
 PnmUTgCJM0hyb1kwalLdx0xc5jHQspzeX+pat4QboW6YM0wSykNPcviZLMCQTw8mg/L3+YiESmg9
-eIrgwT3aYJ//2Q==);background-size:cover;background-position:center;opacity:0.13;filter:blur(3px);transform:scale(1.05)"></div>
+eIrgwT3aYJ//2Q==);background-size:cover;background-position:center;opacity:0.22;filter:blur(2px);transform:scale(1.05)"></div>
     <div class="container" style="position:relative;z-index:1">
       <div>
         <div class="panel">
@@ -2280,7 +2280,12 @@ eIrgwT3aYJ//2Q==);background-size:cover;background-position:center;opacity:0.13;
     <div class="user-table-wrap">
       <div class="user-table-head">
         <h3>Usuaris del sistema</h3>
-        <button class="btn-sm primary" onclick="openUserModal()">＋ Nou usuari</button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn-sm primary" onclick="openUserModal()">＋ Nou usuari</button>
+          <button class="btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--text)" onclick="document.getElementById('csvFileInput').click()">⬆ Importar CSV</button>
+          <button class="btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent2)" onclick="downloadCSVTemplate()">⬇ Plantilla CSV</button>
+          <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="importCSV(this)" />
+        </div>
       </div>
       <table>
         <thead>
@@ -2296,6 +2301,18 @@ eIrgwT3aYJ//2Q==);background-size:cover;background-position:center;opacity:0.13;
         </thead>
         <tbody id="usersBody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="width:min(560px,95vw)">
+    <h2 id="importModalTitle">Importació massiva d'usuaris</h2>
+    <div id="importModalBody"></div>
+    <div class="modal-actions" id="importModalActions">
+      <button class="btn-ghost" onclick="closeModal('importModal')">Tancar</button>
+      <button class="btn-sm primary" style="flex:1;padding:0.65rem" id="importConfirmBtn" onclick="confirmImport()" style="display:none">Importar usuaris</button>
     </div>
   </div>
 </div>
@@ -2956,6 +2973,153 @@ function checkPassStrength(val){
   const cols=['#f75f5f','#f7874f','#e8c547','#4fcf8e','#4fcf8e'];
   bar.style.width=pct+'%';
   bar.style.background=cols[Math.max(score-1,0)]||'var(--border)';
+}
+
+
+// ── CSV IMPORT
+let pendingImportUsers = [];
+
+function downloadCSVTemplate(){
+  const header = 'usuari,nom_complet,correu,rol';
+  const example = [
+    'agarcia,Anna Garcia,agarcia@escola.cat,user',
+    'jlopez,Joan Lopez,jlopez@escola.cat,user',
+    'mdalmau,Maria Dalmau,mdalmau@escola.cat,user',
+  ].join('\n');
+  const blob = new Blob([header + '\n' + example], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'plantilla_usuaris.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importCSV(input){
+  const file = input.files[0];
+  if(!file) return;
+  input.value = ''; // reset so same file can be re-imported
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const text = e.target.result;
+    parseCSV(text);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if(lines.length < 2){ showToast('El fitxer CSV és buit o incorrecte', true); return; }
+
+  // Detect separator (, or ;)
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/[^a-z_]/g,''));
+
+  const colUsuari    = headers.findIndex(h => h.includes('usuari') || h.includes('user'));
+  const colNom       = headers.findIndex(h => h.includes('nom') || h.includes('full') || h.includes('name'));
+  const colCorreu    = headers.findIndex(h => h.includes('correu') || h.includes('email') || h.includes('mail'));
+  const colRol       = headers.findIndex(h => h.includes('rol') || h.includes('role'));
+
+  if(colUsuari === -1 || colNom === -1){
+    showPreviewError("No s'han trobat les columnes obligatòries (usuari, nom_complet). Comprova la plantilla.");
+    return;
+  }
+
+  const results = { ok: [], duplicats: [], errors: [] };
+  pendingImportUsers = [];
+
+  for(let i = 1; i < lines.length; i++){
+    const line = lines[i].trim();
+    if(!line) continue;
+    const cols = line.split(sep).map(c => c.trim().replace(/^"|"$/g,''));
+
+    const username = (cols[colUsuari]||'').toLowerCase().replace(/\s/g,'');
+    const fullname = cols[colNom]||'';
+    const email    = colCorreu >= 0 ? (cols[colCorreu]||'') : '';
+    const role     = colRol >= 0 ? (cols[colRol]||'user').toLowerCase() : 'user';
+
+    if(!username || !fullname){
+      results.errors.push(`Fila ${i+1}: usuari o nom buit`);
+      continue;
+    }
+    if(users.find(u => u.username === username)){
+      results.duplicats.push(username);
+      continue;
+    }
+    const newUser = {
+      id: 'u'+Date.now()+Math.random().toString(36).slice(2),
+      username, fullname, email,
+      password: username, // password = username, must change on first login
+      role: (role === 'admin') ? 'admin' : 'user',
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+      mustChangePassword: true
+    };
+    results.ok.push(newUser);
+    pendingImportUsers.push(newUser);
+  }
+
+  showImportPreview(results);
+}
+
+function showPreviewError(msg){
+  document.getElementById('importModalTitle').textContent = 'Error al fitxer CSV';
+  document.getElementById('importModalBody').innerHTML = `<div style="color:var(--danger);font-size:0.85rem;padding:1rem;background:rgba(220,38,38,0.08);border-radius:10px">${msg}</div>`;
+  document.getElementById('importConfirmBtn').style.display = 'none';
+  document.getElementById('importModal').className = 'modal-overlay open';
+}
+
+function showImportPreview(results){
+  document.getElementById('importModalTitle').textContent = 'Previsualització de la importació';
+
+  let html = '';
+
+  if(results.ok.length){
+    html += `<div style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.25);border-radius:12px;padding:1rem;margin-bottom:0.8rem">
+      <div style="font-weight:700;color:var(--success);margin-bottom:0.6rem">✓ ${results.ok.length} usuari${results.ok.length>1?'s':''} nous</div>
+      <div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">`;
+    results.ok.forEach(u => {
+      html += `<div style="display:flex;align-items:center;gap:0.6rem;font-size:0.78rem;padding:4px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
+        <span style="font-family:monospace;background:var(--card);border-radius:4px;padding:1px 6px">${u.username}</span>
+        <span>${u.fullname}</span>
+        ${u.email ? `<span style="color:var(--muted)">${u.email}</span>` : ''}
+        <span style="margin-left:auto;font-size:0.65rem;background:rgba(37,99,235,0.1);color:var(--accent);border-radius:4px;padding:1px 5px">${u.role}</span>
+      </div>`;
+    });
+    html += `</div>
+      <div style="margin-top:0.6rem;font-size:0.72rem;color:var(--muted)">🔑 Contrasenya inicial = nom d'usuari (hauran de canviar-la al primer accés)</div>
+    </div>`;
+  }
+
+  if(results.duplicats.length){
+    html += `<div style="background:rgba(234,88,12,0.08);border:1px solid rgba(234,88,12,0.25);border-radius:12px;padding:0.8rem 1rem;margin-bottom:0.8rem">
+      <div style="font-weight:700;color:#ea580c;margin-bottom:0.4rem">⚠ ${results.duplicats.length} ja existeixen (s'ometen)</div>
+      <div style="font-size:0.78rem;color:var(--muted)">${results.duplicats.join(', ')}</div>
+    </div>`;
+  }
+
+  if(results.errors.length){
+    html += `<div style="background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:12px;padding:0.8rem 1rem">
+      <div style="font-weight:700;color:var(--danger);margin-bottom:0.4rem">✕ ${results.errors.length} files amb error</div>
+      <div style="font-size:0.75rem;color:var(--muted)">${results.errors.join('<br>')}</div>
+    </div>`;
+  }
+
+  if(!results.ok.length){
+    html += `<div style="text-align:center;color:var(--muted);padding:1rem;font-size:0.85rem">No hi ha usuaris nous per importar.</div>`;
+  }
+
+  document.getElementById('importModalBody').innerHTML = html;
+  document.getElementById('importConfirmBtn').style.display = results.ok.length ? '' : 'none';
+  document.getElementById('importModal').className = 'modal-overlay open';
+}
+
+function confirmImport(){
+  if(!pendingImportUsers.length) return;
+  pendingImportUsers.forEach(u => users.push(u));
+  save('bib_users', users);
+  closeModal('importModal');
+  renderUsersTable();
+  showToast(`✓ ${pendingImportUsers.length} usuari${pendingImportUsers.length>1?'s':''} importat${pendingImportUsers.length>1?'s':''}`);
+  pendingImportUsers = [];
 }
 
 function saveUser(){
