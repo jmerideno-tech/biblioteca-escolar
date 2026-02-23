@@ -129,6 +129,7 @@
   .cal-day.selected { background:var(--accent); color:#fff; font-weight:700; }
   .cal-day.selected::after { background:#fff; }
   .cal-day.today-mark { border:1px solid var(--accent2); }
+  .cal-day.custom-selected { background:rgba(124,58,237,0.15); color:var(--accent2); border:1.5px solid var(--accent2); font-weight:700; }
 
   /* SLOTS */
   .slots-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:1.2rem; }
@@ -307,6 +308,32 @@
   .pass-strength { height:3px; border-radius:2px; margin-top:4px; background:var(--border); overflow:hidden; }
   .pass-strength-bar { height:100%; border-radius:2px; transition:all 0.3s; width:0; }
 
+  /* REPEAT */
+  .repeat-options { display:flex; gap:6px; flex-wrap:wrap; }
+  .repeat-chip {
+    padding:0.35rem 0.75rem; border-radius:20px; border:1.5px solid var(--border);
+    background:var(--card); color:var(--muted); font-size:0.72rem; font-weight:600;
+    cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .repeat-chip:hover { border-color:var(--accent2); color:var(--accent2); }
+  .repeat-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(37,99,235,0.08); }
+  .repeat-box {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:1rem; margin-bottom:1rem; animation:fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .custom-day-tag {
+    display:flex; align-items:center; gap:4px; background:rgba(37,99,235,0.1);
+    border:1px solid rgba(37,99,235,0.3); border-radius:20px;
+    padding:2px 8px 2px 10px; font-size:0.68rem; font-weight:600; color:var(--accent);
+  }
+  .custom-day-tag button {
+    background:none; border:none; color:var(--accent); cursor:pointer;
+    font-size:0.75rem; line-height:1; padding:0; opacity:0.7;
+  }
+  .custom-day-tag button:hover { opacity:1; }
+  .repeat-date-item { display:inline-block; }
+
   /* TOAST */
   .toast {
     position:fixed; bottom:2rem; right:2rem; background:var(--success); color:#fff;
@@ -388,7 +415,40 @@
               <label>Observacions (opcional)</label>
               <textarea id="notes" placeholder="Necessitats especials, recursos..."></textarea>
             </div>
-            <button class="btn btn-primary" id="bookBtn" onclick="createBooking()" disabled>Confirmar Reserva</button>
+
+            <!-- REPETICIÓ -->
+            <div class="form-group">
+              <label>Repetició</label>
+              <div class="repeat-options" id="repeatOptions">
+                <div class="repeat-chip active" data-repeat="none" onclick="selectRepeat('none')">Cap</div>
+                <div class="repeat-chip" data-repeat="weekly" onclick="selectRepeat('weekly')">Setmanal</div>
+                <div class="repeat-chip" data-repeat="monthly" onclick="selectRepeat('monthly')">Mensual</div>
+                <div class="repeat-chip" data-repeat="custom" onclick="selectRepeat('custom')">Altre dia</div>
+              </div>
+            </div>
+
+            <div id="repeatWeeklyBox" style="display:none" class="repeat-box">
+              <div class="form-group" style="margin-bottom:0.5rem">
+                <label>Repetir fins a</label>
+                <input type="date" id="repeatUntil" oninput="updateWeeklyPreview()" />
+              </div>
+              <div id="repeatPreview" style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem;line-height:1.7"></div>
+            </div>
+
+            <div id="repeatMonthlyBox" style="display:none" class="repeat-box">
+              <div class="form-group" style="margin-bottom:0.5rem">
+                <label>Repetir fins a</label>
+                <input type="date" id="repeatUntilMonthly" oninput="updateMonthlyPreview()" />
+              </div>
+              <div id="repeatPreviewMonthly" style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem;line-height:1.7"></div>
+            </div>
+
+            <div id="repeatCustomBox" style="display:none" class="repeat-box">
+              <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">Fes clic als dies del calendari per afegir-los a la selecció</div>
+              <div id="customDaysTags" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px"></div>
+            </div>
+
+            <button class="btn btn-primary" id="bookBtn" onclick="createBooking()" disabled style="margin-top:0.8rem">Confirmar Reserva</button>
           </div>
         </div>
       </div>
@@ -556,6 +616,14 @@ function doLogout(){
 }
 
 function startApp(){
+  // Set date input limits
+  setTimeout(()=>{
+    const minD='2025-09-12', maxD='2026-06-20';
+    ['repeatUntil','repeatUntilMonthly'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){el.min=minD;el.max=maxD;}
+    });
+  },100);
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appShell').style.display='block';
   // Pill
@@ -618,7 +686,8 @@ function renderCalendar(){
     const isT=key===todayKey;
     if(!isSchoolDay(date)){el.className='cal-day disabled';}
     else{
-      el.className='cal-day available'+(hasBk?' has-bookings':'')+(isT?' today-mark':'');
+      const isCustom=customDays.includes(key);
+      el.className='cal-day available'+(hasBk?' has-bookings':'')+(isT?' today-mark':'')+(isCustom?' custom-selected':'');
       if(selectedDate&&key===dateKey(selectedDate))el.classList.add('selected');
       el.addEventListener('click',()=>selectDate(date));
     }
@@ -627,7 +696,16 @@ function renderCalendar(){
 }
 document.getElementById('prevMonth').onclick=()=>{currentMonth.setMonth(currentMonth.getMonth()-1);renderCalendar()};
 document.getElementById('nextMonth').onclick=()=>{currentMonth.setMonth(currentMonth.getMonth()+1);renderCalendar()};
-function selectDate(date){selectedDate=date;selectedSlot=null;renderCalendar();updateSlotsUI();document.getElementById('selectedDateLabel').textContent=formatDateLong(date);validateForm()}
+function selectDate(date){
+  if(repeatMode==='custom' && selectedDate && dateKey(date)!==dateKey(selectedDate)){
+    addCustomDay(date);
+    return;
+  }
+  selectedDate=date;selectedSlot=null;customDays=[];renderCustomTags();
+  renderCalendar();updateSlotsUI();
+  document.getElementById('selectedDateLabel').textContent=formatDateLong(date);
+  validateForm();
+}
 
 // ── SLOTS
 function updateSlotsUI(){
@@ -648,6 +726,107 @@ function selectSlot(i){
 function validateForm(){document.getElementById('bookBtn').disabled=!(selectedDate&&selectedSlot!==null&&document.getElementById('classroom').value.trim())}
 document.getElementById('classroom').addEventListener('input',validateForm);
 
+// ── REPEAT LOGIC
+let repeatMode = 'none';
+let customDays = []; // array of dateKey strings
+
+function selectRepeat(mode) {
+  repeatMode = mode;
+  document.querySelectorAll('.repeat-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.repeat === mode);
+  });
+  document.getElementById('repeatWeeklyBox').style.display = mode === 'weekly' ? 'block' : 'none';
+  document.getElementById('repeatMonthlyBox').style.display = mode === 'monthly' ? 'block' : 'none';
+  document.getElementById('repeatCustomBox').style.display = mode === 'custom' ? 'block' : 'none';
+  if (mode === 'custom') customDays = [];
+  renderCustomTags();
+}
+
+function getRepeatDates() {
+  if (!selectedDate) return [];
+  const dates = [];
+  if (repeatMode === 'weekly') {
+    const until = document.getElementById('repeatUntil').value;
+    if (!until) return [];
+    const untilDate = new Date(until + 'T00:00:00');
+    let cur = addDays(selectedDate, 7);
+    while (cur <= untilDate && cur <= SCHOOL_END) {
+      if (isSchoolDay(cur)) dates.push(dateKey(cur));
+      cur = addDays(cur, 7);
+    }
+  } else if (repeatMode === 'monthly') {
+    const until = document.getElementById('repeatUntilMonthly').value;
+    if (!until) return [];
+    const untilDate = new Date(until + 'T00:00:00');
+    let cur = new Date(selectedDate);
+    cur.setMonth(cur.getMonth() + 1);
+    while (cur <= untilDate && cur <= SCHOOL_END) {
+      if (isSchoolDay(cur)) dates.push(dateKey(cur));
+      else {
+        // try next day
+        const alt = addDays(cur, 1);
+        if (isSchoolDay(alt) && alt <= untilDate) dates.push(dateKey(alt));
+      }
+      cur = new Date(cur);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  } else if (repeatMode === 'custom') {
+    return [...customDays];
+  }
+  return dates;
+}
+
+function updateWeeklyPreview() {
+  const dates = getRepeatDates();
+  const el = document.getElementById('repeatPreview');
+  if (!dates.length) { el.textContent = 'Indica una data límit'; return; }
+  const conflicts = dates.filter(d => isBooked(d, selectedSlot));
+  el.innerHTML = `<span style="color:var(--success)">✓ ${dates.length} repeticions</span>${conflicts.length ? ` · <span style="color:var(--danger)">${conflicts.length} ja reservat(s)</span>` : ''}`;
+}
+
+function updateMonthlyPreview() {
+  const dates = getRepeatDates();
+  const el = document.getElementById('repeatPreviewMonthly');
+  if (!dates.length) { el.textContent = 'Indica una data límit'; return; }
+  const conflicts = dates.filter(d => isBooked(d, selectedSlot));
+  el.innerHTML = `<span style="color:var(--success)">✓ ${dates.length} repeticions</span>${conflicts.length ? ` · <span style="color:var(--danger)">${conflicts.length} ja reservat(s)</span>` : ''}`;
+}
+
+function addCustomDay(date) {
+  if (repeatMode !== 'custom') return;
+  const key = dateKey(date);
+  if (key === dateKey(selectedDate)) return;
+  if (customDays.includes(key)) {
+    customDays = customDays.filter(d => d !== key);
+  } else {
+    customDays.push(key);
+    customDays.sort();
+  }
+  renderCustomTags();
+  renderCalendar();
+}
+
+function removeCustomDay(key) {
+  customDays = customDays.filter(d => d !== key);
+  renderCustomTags();
+  renderCalendar();
+}
+
+function renderCustomTags() {
+  const el = document.getElementById('customDaysTags');
+  if (!el) return;
+  if (!customDays.length) {
+    el.innerHTML = '<span style="font-size:0.7rem;color:var(--muted)">Cap dia afegit encara</span>';
+    return;
+  }
+  el.innerHTML = customDays.map(k => {
+    const [y,m,d] = k.split('-');
+    const dObj = new Date(+y,+m-1,+d);
+    const label = `${dObj.getDate()} ${MONTHS_CA[dObj.getMonth()].slice(0,3)}`;
+    return `<div class="custom-day-tag">${label}<button onclick="removeCustomDay('${k}')">✕</button></div>`;
+  }).join('');
+}
+
 // ── CREATE BOOKING
 function createBooking(){
   const classroom=document.getElementById('classroom').value.trim();
@@ -656,13 +835,28 @@ function createBooking(){
   if(!classroom||!selectedDate||selectedSlot===null){showToast('Completa els camps obligatoris',true);return}
   const key=dateKey(selectedDate);
   if(isBooked(key,selectedSlot)){showToast('Aquesta franja ja està reservada',true);return}
-  bookings.push({id:Date.now().toString(),date:key,slot:selectedSlot,userId:currentUser.id,userName:currentUser.fullname,classroom,activity:activity||'Ús general',notes,created:new Date().toISOString()});
+
+  const allDates = [key, ...getRepeatDates()];
+  const skipped = [];
+  let added = 0;
+  allDates.forEach(d => {
+    if (isBooked(d, selectedSlot)) { skipped.push(d); return; }
+    bookings.push({id:Date.now().toString()+Math.random().toString(36).slice(2),date:d,slot:selectedSlot,userId:currentUser.id,userName:currentUser.fullname,classroom,activity:activity||'Ús general',notes,created:new Date().toISOString(),repeatGroup:key});
+    added++;
+  });
+
   save('bib_bookings',bookings);
-  showToast(`✓ Reserva confirmada — ${classroom}`);
+  const msg = added > 1
+    ? `✓ ${added} reserves confirmades${skipped.length ? ` (${skipped.length} ja ocupades)` : ''}`
+    : `✓ Reserva confirmada — ${classroom}`;
+  showToast(msg);
   document.getElementById('classroom').value='';
   document.getElementById('activity').value='';
   document.getElementById('notes').value='';
   selectedSlot=null;
+  repeatMode='none';
+  customDays=[];
+  selectRepeat('none');
   updateSlotsUI();validateForm();renderCalendar();renderSchedule();renderStats();
 }
 
