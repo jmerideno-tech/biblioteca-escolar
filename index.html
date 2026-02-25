@@ -2518,7 +2518,16 @@ function showSection(sec){
 }
 
 // ── HELPERS
-function dateKey(d){return d.toISOString().slice(0,10)}
+function dateKey(d){
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function parseLocalDate(str){
+  const [y,m,d]=str.split('-');
+  return new Date(+y,+m-1,+d);
+}
 function isSchoolDay(d){const day=d.getDay();return day!==0&&day!==6&&d>=SCHOOL_START&&d<=SCHOOL_END}
 function getMonday(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=dt.getDay();dt.setDate(dt.getDate()+(day===0?-6:1-day));return dt}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
@@ -2717,8 +2726,7 @@ function renderCustomTags() {
     return;
   }
   el.innerHTML = customDays.map(k => {
-    const [y,m,d] = k.split('-');
-    const dObj = new Date(+y,+m-1,+d);
+    const dObj = parseLocalDate(k);
     const label = `${dObj.getDate()} ${MONTHS_CA[dObj.getMonth()].slice(0,3)}`;
     return `<div class="custom-day-tag">${label}<button onclick="removeCustomDay('${k}')">✕</button></div>`;
   }).join('');
@@ -2732,8 +2740,7 @@ function sendConfirmationEmail(booking){
   if(!rtPK||!rtSvc||!rtTpl) return; // Not configured
   const user = users.find(u=>u.id===booking.userId);
   if(!user||!user.email) return;
-  const [y,m,d]=booking.date.split('-');
-  const dObj=new Date(+y,+m-1,+d);
+  const dObj=parseLocalDate(booking.date);
   const dateStr=formatDateLong(dObj);
   emailjs.send(rtSvc, rtTpl, {
     to_email:   user.email,
@@ -2858,8 +2865,7 @@ function renderList(){
   if(!all.length){html+=`<div class="empty-state"><div class="es-icon">📚</div>No hi ha reserves${bookings.length?' amb aquests filtres':''}</div>`}
   else all.forEach(b=>{
     const color=SLOT_COLORS[b.slot];
-    const [y,m,d]=b.date.split('-');
-    const dObj=new Date(+y,+m-1,+d);
+    const dObj=parseLocalDate(b.date);
     const dStr=`${dObj.getDate()} ${MONTHS_CA[dObj.getMonth()].slice(0,3)}`;
     const mine=b.userId===currentUser.id;
     const delOk=canDelete(b);
@@ -2881,8 +2887,7 @@ function openBookingModal(id){
   const b=bookings.find(x=>x.id===id);
   if(!b)return;
   activeBookingId=id;
-  const [y,m,d]=b.date.split('-');
-  const dObj=new Date(+y,+m-1,+d);
+  const dObj=parseLocalDate(b.date);
   const mine=b.userId===currentUser.id;
   document.getElementById('bModalTitle').textContent=`${b.classroom} · ${SLOTS[b.slot]}`;
   document.getElementById('bModalMeta').textContent=formatDateLong(dObj);
