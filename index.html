@@ -2435,10 +2435,26 @@ let currentMonth=new Date(2025,8,1), currentWeekStart=getMonday(new Date());
 let currentView='week', searchFilter='', slotFilter=-1;
 
 // ── AUTH
-function doLogin(){
+async function doLogin(){
   const username=document.getElementById('loginUser').value.trim();
   const password=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
+
+  // If Firebase not ready yet, wait and reload users first
+  if(!appReady){
+    err.textContent="⏳ Connectant... torna a provar en uns segons.";
+    err.style.display='block';
+    return;
+  }
+
+  // Always reload users from Firebase before login to get latest data
+  try {
+    const usersDoc = await db.collection('data').doc('users').get();
+    if(usersDoc.exists && usersDoc.data().list){
+      users = usersDoc.data().list;
+    }
+  } catch(e){ console.warn('Could not refresh users:', e); }
+
   const user=users.find(u=>u.username===username&&u.password===password);
   if(!user){err.textContent="Usuari o contrasenya incorrectes.";err.style.display='block';return;}
   err.style.display='none';
@@ -2535,7 +2551,12 @@ async function loadFromFirebase(){
   }
 }
 
-function startApp(){
+async function startApp(){
+  // Reload latest bookings from Firebase
+  try {
+    const bDoc = await db.collection('data').doc('bookings').get();
+    if(bDoc.exists && bDoc.data().list) bookings = bDoc.data().list;
+  } catch(e){ console.warn('Could not refresh bookings:', e); }
   // Set date input limits
   setTimeout(()=>{
     const minD='2025-09-12', maxD='2026-06-20';
